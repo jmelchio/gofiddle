@@ -2,9 +2,20 @@ package main
 
 import (
 	"bufio"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
+
+	_ "github.com/lib/pq"
+)
+
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = ""
+	dbname   = "vetlab"
 )
 
 func writeSomeStuff(fileName string, text string) error {
@@ -51,6 +62,25 @@ func errHandler(err error) {
 	}
 }
 
+func databaseStuff() error {
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
+		host, port, user, dbname)
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	err = db.Ping()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("We connected to the database!")
+	return nil
+}
+
 func main() {
 	text := `And now for something completely different:
 The Larch!
@@ -61,6 +91,8 @@ Not to be confused with a shrubbery!
 	err := writeSomeStuff("./readfile.txt", text)
 	errHandler(err)
 	err = readAndPrint("./readfile.txt")
+	errHandler(err)
+	err = databaseStuff()
 	errHandler(err)
 
 	if err != nil {
