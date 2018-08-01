@@ -2,12 +2,12 @@ package main
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"os"
 	"strings"
 
-	_ "github.com/lib/pq"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 const (
@@ -15,8 +15,14 @@ const (
 	port     = 5432
 	user     = "postgres"
 	password = ""
-	dbname   = "vetlab"
+	dbname   = "postgres"
 )
+
+type Product struct {
+	gorm.Model
+	Code  string
+	Price uint
+}
 
 func writeSomeStuff(fileName string, text string) error {
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
@@ -66,16 +72,32 @@ func databaseStuff() error {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
 		host, port, user, dbname)
 
-	db, err := sql.Open("postgres", psqlInfo)
+	db, err := gorm.Open("postgres", psqlInfo)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	err = db.Ping()
+	err = db.DB().Ping()
 	if err != nil {
 		return err
 	}
+
+	// Migrate the schema
+	db.AutoMigrate(&Product{})
+
+	// Create
+	db.Create(&Product{Code: "L1212", Price: 1000})
+
+	// Read
+	var product Product
+	db.First(&product, 1) // find product with id 1
+	db.First(&product).Update("Price", 2000)
+
+	fmt.Println(product.Code, product.Price)
+
+	// Delete - delete the product
+	db.Delete(&product)
 
 	fmt.Println("We connected to the database!")
 	return nil
